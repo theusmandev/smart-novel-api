@@ -1,12 +1,12 @@
 const { createClient } = require('@supabase/supabase-js');
-const Fuse = require('fuse.js'); // Real Fuse.js Engine Import
+const Fuse = require('fuse.js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 module.exports = async (req, res) => {
-  // Blogger ke liye CORS Headers
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
     if (query) {
       const cleanQuery = query.trim();
 
-      // 1. Supabase Dynamic RPC se loose candidates fetch karna (No Column Crash)
+      // 1. Database se unique tokenized candidates uthana
       const { data: results, error } = await supabase
         .rpc('search_novels_fuse', { search_term: cleanQuery });
 
@@ -34,24 +34,25 @@ module.exports = async (req, res) => {
         return res.status(200).json({ data: [], total: 0 });
       }
 
-      // 2. Data pool ko Fuse.js ke standard format mein normalize karna
+      // 2. Format pool for Fuse.js
       const booksPool = results.map(row => ({
         Titles: row.titles || "",
         Links: row.links || "#"
       }));
 
-      // 3. EXACT PURANI FRONT-END FUSE.JS CONFIGURATION
+      // 3. EXACT ORIGINAL FRONT-END FUSE.JS CONFIGURATION
       const fuse = new Fuse(booksPool, {
         keys: ['Titles'],
-        threshold: 0.3,        // Typos aur partial searches ka perfect balance
+        threshold: 0.6,        // Pure frontend fuzzy threshold
         distance: 100,
         location: 0,
-        minMatchCharLength: 2
+        minMatchCharLength: 2,
+        findAllMatches: true
       });
 
       const fuseResults = fuse.search(cleanQuery);
 
-      // 4. Clean output array banana jaisa Blogger frontend ko chahiye
+      // 4. Map output to original array format
       const finalResponse = fuseResults.map(r => ({
          Titles: r.item.Titles,
          Links: r.item.Links
@@ -63,7 +64,7 @@ module.exports = async (req, res) => {
       });
 
     } else {
-      // Normal Library view Pagination logic
+      // Normal Pagination Logic
       const start = parseInt(offset) || 0;
       const end = start + 20;
 
