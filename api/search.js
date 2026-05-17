@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const Fuse = require('fuse.js'); // Real Fuse.js engine
+const Fuse = require('fuse.js'); // Real Fuse.js Engine Import
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -24,9 +24,9 @@ module.exports = async (req, res) => {
     if (query) {
       const cleanQuery = query.trim();
 
-      // 1. Supabase se tezi se candidates uthana (Blindingly Fast)
+      // 1. Supabase Dynamic RPC se loose candidates fetch karna (No Column Crash)
       const { data: results, error } = await supabase
-        .rpc('search_novels_intent', { search_term: cleanQuery });
+        .rpc('search_novels_fuse', { search_term: cleanQuery });
 
       if (error) throw error;
 
@@ -34,25 +34,24 @@ module.exports = async (req, res) => {
         return res.status(200).json({ data: [], total: 0 });
       }
 
-      // 2. Data pool ko map karna
+      // 2. Data pool ko Fuse.js ke standard format mein normalize karna
       const booksPool = results.map(row => ({
-        Titles: row.Titles || "",
-        Links: row.Links || "#"
+        Titles: row.titles || "",
+        Links: row.links || "#"
       }));
 
-      // 3. EXACT PURANI FUSE.JS CONFIGURATION
-      const fuseOptions = {
+      // 3. EXACT PURANI FRONT-END FUSE.JS CONFIGURATION
+      const fuse = new Fuse(booksPool, {
         keys: ['Titles'],
-        threshold: 0.5,        // Typos aur partial matching ka perfect balance
+        threshold: 0.6,        // Typos aur partial searches ka perfect balance
         distance: 100,
         location: 0,
         minMatchCharLength: 2
-      };
+      });
 
-      const fuse = new Fuse(booksPool, fuseOptions);
       const fuseResults = fuse.search(cleanQuery);
 
-      // 4. Clean output formats array banana jaisa Blogger frontend ko chahiye
+      // 4. Clean output array banana jaisa Blogger frontend ko chahiye
       const finalResponse = fuseResults.map(r => ({
          Titles: r.item.Titles,
          Links: r.item.Links
@@ -76,8 +75,8 @@ module.exports = async (req, res) => {
       if (error) throw error;
 
       const formatted = (data || []).map(row => ({
-        Titles: row.Titles,
-        Links: row.Links
+        Titles: row.Titles || row.titles || "",
+        Links: row.Links || row.links || "#"
       }));
 
       return res.status(200).json({ data: formatted, total: 78500 });
