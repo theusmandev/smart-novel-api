@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
       // 3. EXACT ORIGINAL FRONT-END FUSE.JS CONFIGURATION
       const fuse = new Fuse(booksPool, {
         keys: ['Titles'],
-        threshold: 0.3,        // Pure frontend fuzzy threshold
+        threshold: 0.4,        // Pure frontend fuzzy threshold
         distance: 100,
         location: 0,
         minMatchCharLength: 2,
