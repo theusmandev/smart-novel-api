@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
       // 3. EXACT PURANI FRONT-END FUSE.JS CONFIGURATION
       const fuse = new Fuse(booksPool, {
         keys: ['Titles'],
-        threshold: 0.6,        // Typos aur partial searches ka perfect balance
+        threshold: 0.3,        // Typos aur partial searches ka perfect balance
         distance: 100,
         location: 0,
         minMatchCharLength: 2
