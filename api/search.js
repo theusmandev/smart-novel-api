@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const Fuse = require('fuse.js'); // Actual Fuse.js Import!
+const Fuse = require('fuse.js'); // Real Fuse.js engine
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -17,14 +17,14 @@ module.exports = async (req, res) => {
   const { query, offset = 0 } = req.query;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ error: "Supabase keys missing in Vercel!" });
+    return res.status(500).json({ error: "Supabase keys are missing in Vercel!" });
   }
 
   try {
     if (query) {
       const cleanQuery = query.trim();
 
-      // 1. Supabase se loose candidates fetch karna
+      // 1. Supabase se tezi se candidates uthana (Blindingly Fast)
       const { data: results, error } = await supabase
         .rpc('search_novels_intent', { search_term: cleanQuery });
 
@@ -34,25 +34,29 @@ module.exports = async (req, res) => {
         return res.status(200).json({ data: [], total: 0 });
       }
 
-      // 2. Data normalise karna Fuse ke liye
+      // 2. Data pool ko map karna
       const booksPool = results.map(row => ({
-        Titles: row.Titles || row.titles || "",
-        Links: row.Links || row.links || "#"
+        Titles: row.Titles || "",
+        Links: row.Links || "#"
       }));
 
-      // 3. EXACT FRONT-END FUSE.JS LOGIC ON BACK-END
+      // 3. EXACT PURANI FUSE.JS CONFIGURATION
       const fuseOptions = {
         keys: ['Titles'],
-        threshold: 0.5,       // Balance between strict and very fuzzy
+        threshold: 0.5,        // Typos aur partial matching ka perfect balance
         distance: 100,
-        ignoreLocation: true  // Pure string comparison bina position constraint ke
+        location: 0,
+        minMatchCharLength: 2
       };
 
       const fuse = new Fuse(booksPool, fuseOptions);
       const fuseResults = fuse.search(cleanQuery);
 
-      // Raw array format mein convert karna jaisa website ko chahiye
-      const finalResponse = fuseResults.map(r => r.item);
+      // 4. Clean output formats array banana jaisa Blogger frontend ko chahiye
+      const finalResponse = fuseResults.map(r => ({
+         Titles: r.item.Titles,
+         Links: r.item.Links
+      }));
 
       return res.status(200).json({ 
         data: finalResponse, 
@@ -60,7 +64,7 @@ module.exports = async (req, res) => {
       });
 
     } else {
-      // Library view Pagination logic
+      // Normal Library view Pagination logic
       const start = parseInt(offset) || 0;
       const end = start + 20;
 
@@ -72,13 +76,13 @@ module.exports = async (req, res) => {
       if (error) throw error;
 
       const formatted = (data || []).map(row => ({
-        Titles: row.Titles || row.titles,
-        Links: row.Links || row.links
+        Titles: row.Titles,
+        Links: row.Links
       }));
 
       return res.status(200).json({ data: formatted, total: 78500 });
     }
   } catch (error) {
-    return res.status(500).json({ error: 'FUSE_ENGINE_ERROR', message: error.message });
+    return res.status(500).json({ error: 'FUSE_SERVER_ERROR', message: error.message });
   }
 };
