@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const Fuse = require('fuse.js'); // Actual Fuse.js Import!
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -23,15 +24,39 @@ module.exports = async (req, res) => {
     if (query) {
       const cleanQuery = query.trim();
 
-      // ADVANCED: Direct Supabase ke Database Function (RPC) ko call karna
+      // 1. Supabase se loose candidates fetch karna
       const { data: results, error } = await supabase
         .rpc('search_novels_intent', { search_term: cleanQuery });
 
       if (error) throw error;
 
+      if (!results || results.length === 0) {
+        return res.status(200).json({ data: [], total: 0 });
+      }
+
+      // 2. Data normalise karna Fuse ke liye
+      const booksPool = results.map(row => ({
+        Titles: row.Titles || row.titles || "",
+        Links: row.Links || row.links || "#"
+      }));
+
+      // 3. EXACT FRONT-END FUSE.JS LOGIC ON BACK-END
+      const fuseOptions = {
+        keys: ['Titles'],
+        threshold: 0.5,       // Balance between strict and very fuzzy
+        distance: 100,
+        ignoreLocation: true  // Pure string comparison bina position constraint ke
+      };
+
+      const fuse = new Fuse(booksPool, fuseOptions);
+      const fuseResults = fuse.search(cleanQuery);
+
+      // Raw array format mein convert karna jaisa website ko chahiye
+      const finalResponse = fuseResults.map(r => r.item);
+
       return res.status(200).json({ 
-        data: results || [], 
-        total: (results || []).length 
+        data: finalResponse, 
+        total: finalResponse.length 
       });
 
     } else {
@@ -54,6 +79,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ data: formatted, total: 78500 });
     }
   } catch (error) {
-    return res.status(500).json({ error: 'ADVANCED_ENGINE_ERROR', message: error.message });
+    return res.status(500).json({ error: 'FUSE_ENGINE_ERROR', message: error.message });
   }
 };
