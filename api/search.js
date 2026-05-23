@@ -1,15 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const Fuse = require('fuse.js');
 
-// const supabaseUrl = process.env.SUPABASE_URL;
-// const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-const supabaseUrl = 'https://tfmorbaldfhkcvizdwya.supabase.co';
-const supabaseAnonKey = 'sb_publishable_KfsoNXGMJa4nSCb7KGR0oA_t-GdreDk';
-
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 
 module.exports = async (req, res) => {
   // CORS Headers
@@ -74,10 +70,10 @@ module.exports = async (req, res) => {
       const start = parseInt(offset) || 0;
       const end = start + 20;
 
-      // 🚀 YAHAN CHANGE KIYA HAI: 'novels' se 'urdu_novels' kar diya
-      const { data, error } = await supabase
+      // 🚀 YAHAN CHANGE KIYA HAI: { count: 'exact' } add kiya hai
+      const { data, error, count } = await supabase
         .from('urdu_novels')
-        .select('*')
+        .select('*', { count: 'exact' })
         .range(start, end);
 
       if (error) throw error;
@@ -87,8 +83,8 @@ module.exports = async (req, res) => {
         Links: row.Links || row.links || "#"
       }));
 
-      // (Optional) Aap chahay to total count ko dynamic bhi kar sakte hain
-      return res.status(200).json({ data: formatted, total: 78500 });
+      // 🚀 YAHAN CHANGE KIYA HAI: 78500 ki jagah variable 'count' laga diya hai
+      return res.status(200).json({ data: formatted, total: count });
     }
   } catch (error) {
     return res.status(500).json({ error: 'FUSE_SERVER_ERROR', message: error.message });
