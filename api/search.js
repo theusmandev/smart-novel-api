@@ -36,8 +36,8 @@ module.exports = async (req, res) => {
 
       // 2. Format pool for Fuse.js
       const booksPool = results.map(row => ({
-        Titles: row.titles || "",
-        Links: row.links || "#"
+        Titles: row.titles || row.Titles || "",
+        Links: row.links || row.Links || "#"
       }));
 
       // 3. EXACT ORIGINAL FRONT-END FUSE.JS CONFIGURATION
@@ -68,8 +68,9 @@ module.exports = async (req, res) => {
       const start = parseInt(offset) || 0;
       const end = start + 20;
 
+      // 🚀 YAHAN CHANGE KIYA HAI: 'novels' se 'urdu_novels' kar diya
       const { data, error } = await supabase
-        .from('novels')
+        .from('urdu_novels')
         .select('*')
         .range(start, end);
 
@@ -80,6 +81,7 @@ module.exports = async (req, res) => {
         Links: row.Links || row.links || "#"
       }));
 
+      // (Optional) Aap chahay to total count ko dynamic bhi kar sakte hain
       return res.status(200).json({ data: formatted, total: 78500 });
     }
   } catch (error) {
