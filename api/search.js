@@ -1,9 +1,15 @@
 const { createClient } = require('@supabase/supabase-js');
 const Fuse = require('fuse.js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// const supabaseUrl = process.env.SUPABASE_URL;
+// const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+const supabaseUrl = 'https://tfmorbaldfhkcvizdwya.supabase.co';
+const supabaseAnonKey = 'sb_publishable_KfsoNXGMJa4nSCb7KGR0oA_t-GdreDk';
+
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 
 module.exports = async (req, res) => {
   // CORS Headers
