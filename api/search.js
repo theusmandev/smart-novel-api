@@ -14,18 +14,39 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { query, offset = 0 } = req.query;
+  const { query, offset = 0, featured } = req.query;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return res.status(500).json({ error: "Supabase keys are missing!" });
   }
 
   try {
+
+    // ✅ NAYA: featured=true ho to featured_novels table se random novel do
+    if (featured === 'true') {
+      const { data, error } = await supabase
+        .from('featured_novels')
+        .select('title, link');
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        return res.status(200).json({ data: [], total: 0 });
+      }
+
+      // Server side random pick — ek random novel return karo
+      const pick = data[Math.floor(Math.random() * data.length)];
+
+      return res.status(200).json({
+        data: [{ Titles: pick.title, Links: pick.link }],
+        total: data.length   // total count bhi bhejo (optional use ke liye)
+      });
+    }
+
+    // ─── BAQI SARI API BILKUL PEHLE JAISI HAI ────────────────────────────
+
     if (query) {
       const cleanQuery = query.trim();
 
-      // 🌟 STEP 1: DIRECT EXACT / SUBSTRING MATCH (Bypasses Fuzzy Limits for Long Titles)
-      // Note: Make sure 'Titles' matches your exact column name in Supabase (Titles or titles)
       const { data: exactData, error: exactError } = await supabase
         .from('urdu_novels')
         .select('*')
@@ -33,7 +54,6 @@ module.exports = async (req, res) => {
         .limit(30);
 
       if (exactData && exactData.length > 0) {
-         // Agar exact title mil gaya, toh directly send kar do
          const formattedExact = exactData.map(row => ({
             Titles: row.titles || row.Titles || "",
             Links: row.links || row.Links || "#"
@@ -41,7 +61,6 @@ module.exports = async (req, res) => {
          return res.status(200).json({ data: formattedExact, total: formattedExact.length });
       }
 
-      // 🌟 STEP 2: FUZZY SEARCH FALLBACK (If exact match fails)
       const { data: results, error } = await supabase
         .rpc('search_novels_fuse', { search_term: cleanQuery });
 
@@ -56,7 +75,6 @@ module.exports = async (req, res) => {
         Links: row.links || row.Links || "#"
       }));
 
-      // EXACT ORIGINAL FRONT-END FUSE.JS CONFIGURATION
       const fuse = new Fuse(booksPool, {
         keys: ['Titles'],
         threshold: 0.4,
@@ -79,7 +97,6 @@ module.exports = async (req, res) => {
       });
 
     } else {
-      // Normal Pagination Logic
       const start = parseInt(offset) || 0;
       const end = start + 20;
 
@@ -97,6 +114,7 @@ module.exports = async (req, res) => {
 
       return res.status(200).json({ data: formatted, total: count });
     }
+
   } catch (error) {
     return res.status(500).json({ error: 'SERVER_ERROR', message: error.message });
   }
