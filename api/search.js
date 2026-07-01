@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
     if (featured === 'true') {
       const { data, error } = await supabase
         .from('featured_novels')
-        .select('title, link');
+        .select('Titles, Links');
 
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
       const pick = data[Math.floor(Math.random() * data.length)];
 
       return res.status(200).json({
-        data: [{ Titles: pick.title, Links: pick.link }],
+        data: [{ Titles: pick.Titles, Links: pick.Links }],
         total: data.length   // total count bhi bhejo (optional use ke liye)
       });
     }
