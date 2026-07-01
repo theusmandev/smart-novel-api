@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { query, offset = 0, featured } = req.query;
+  const { query, offset = 0, featured, seen } = req.query;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return res.status(500).json({ error: "Supabase keys are missing!" });
@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
 
   try {
 
-    // ✅ NAYA: featured=true ho to featured_novels table se random novel do
+    // ✅ NAYA: featured=true ho to featured_novels table se novel do (with No-Repeat Logic)
     if (featured === 'true') {
       const { data, error } = await supabase
         .from('featured_novels')
@@ -33,12 +33,33 @@ module.exports = async (req, res) => {
         return res.status(200).json({ data: [], total: 0 });
       }
 
-      // Server side random pick — ek random novel return karo
-      const pick = data[Math.floor(Math.random() * data.length)];
+      let availableNovels = data;
+      let wasReset = false;
+
+      // Agar frontend ne bataya hai ke user yeh novels dekh chuka hai
+      if (seen) {
+          try {
+              const seenList = JSON.parse(decodeURIComponent(seen));
+              // Jo novels pehle dekh liye gaye hain unko list se nikal do
+              availableNovels = data.filter(novel => !seenList.includes(novel.Titles));
+              
+              // Agar user saare featured novels dekh chuka hai, toh list wapas shuru se reset kar do
+              if (availableNovels.length === 0) {
+                  availableNovels = data; 
+                  wasReset = true;
+              }
+          } catch(e) {
+              console.error("Seen list parsing error", e);
+          }
+      }
+
+      // Available novels mein se Server side random pick karo
+      const pick = availableNovels[Math.floor(Math.random() * availableNovels.length)];
 
       return res.status(200).json({
         data: [{ Titles: pick.Titles, Links: pick.Links }],
-        total: data.length   // total count bhi bhejo (optional use ke liye)
+        total: data.length,
+        reset: wasReset // Frontend ko batane ke liye ke list reset ho gayi hai
       });
     }
 
